@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, TextChannel, Message } from 'discord.js';
+import { Client, GatewayIntentBits, TextChannel, Message, Collection } from 'discord.js';
 import { ForumPost } from '../types';
 
 interface DiscordConfig {
@@ -35,11 +35,11 @@ export class DiscordClient {
         if (!(channel instanceof TextChannel)) continue;
 
         const messages = await this.fetchMessages(channel, options);
-        const channelPosts = this.convertMessagesToPosts(messages, channel);
+        const channelPosts = this.convertMessagesToPosts(messages);
         posts.push(...channelPosts);
       }
 
-      await this.client.destroy();
+      await this.destroy();
       return posts;
     } catch (error) {
       console.error('Error fetching Discord posts:', error);
@@ -55,18 +55,25 @@ export class DiscordClient {
       let lastId: string | undefined;
       
       while (messages.length < limit) {
-        const fetchOptions: any = { limit: Math.min(100, limit - messages.length) };
+        const fetchOptions: { limit: number; before?: string } = { 
+          limit: Math.min(100, limit - messages.length)
+        };
         if (lastId) fetchOptions.before = lastId;
         
         const batch = await channel.messages.fetch(fetchOptions);
-        if (batch.size === 0) break;
+        if (!batch || batch.size === 0) break;
         
-        messages.push(...batch.values());
-        lastId = batch.last()?.id;
+        const batchMessages = Array.from(batch.values());
+        messages.push(...batchMessages);
+        
+        const lastMessage = batch.last();
+        if (!lastMessage) break;
+        
+        lastId = lastMessage.id;
         
         if (options.timeframe) {
           const cutoffDate = this.getTimeframeCutoff(options.timeframe);
-          if (batch.last()?.createdAt.getTime() || 0 < cutoffDate.getTime()) break;
+          if (lastMessage.createdAt.getTime() < cutoffDate.getTime()) break;
         }
       }
     } catch (error) {
@@ -76,7 +83,7 @@ export class DiscordClient {
     return messages;
   }
 
-  private convertMessagesToPosts(messages: Message[], channel: TextChannel): ForumPost[] {
+  private convertMessagesToPosts(messages: Message[]): ForumPost[] {
     return messages.map(message => ({
       id: message.id,
       content: message.content,
@@ -86,7 +93,7 @@ export class DiscordClient {
       platform: 'discord',
       reactions: Array.from(message.reactions.cache.values()).map(reaction => ({
         type: reaction.emoji.name || 'unknown',
-        count: reaction.count
+        count: reaction.count || 0
       }))
     }));
   }
@@ -102,6 +109,12 @@ export class DiscordClient {
         return new Date(now.setMonth(now.getMonth() - 1));
       default:
         return new Date(0);
+    }
+  }
+
+  async destroy(): Promise<void> {
+    if (this.client) {
+      await this.client.destroy();
     }
   }
 } 

@@ -26,7 +26,6 @@ import { gelatoPlugin } from "@elizaos/plugin-gelato";
 import { PrimusAdapter } from "@elizaos/plugin-primus";
 import { lightningPlugin } from "@elizaos/plugin-lightning";
 import { elizaCodeinPlugin, onchainJson } from "@elizaos/plugin-iq6900";
-import { dcapPlugin } from "@elizaos/plugin-dcap";
 import {
     AgentRuntime,
     CacheManager,
@@ -156,7 +155,6 @@ import { MongoClient } from "mongodb";
 import { quickIntelPlugin } from "@elizaos/plugin-quick-intel";
 
 import { trikonPlugin } from "@elizaos/plugin-trikon";
-import arbitragePlugin from "@elizaos/plugin-arbitrage";
 import { forumAnalyzerPlugin } from "@elizaos/plugin-forum-analyzer";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
@@ -1280,10 +1278,8 @@ export async function createAgent(
             getSecret(character, "MINA_PRIVATE_KEY") ? minaPlugin : null,
             getSecret(character, "FORM_PRIVATE_KEY") ? formPlugin : null,
             getSecret(character, "ANKR_WALLET") ? ankrPlugin : null,
-            getSecret(character, "DCAP_EVM_PRIVATE_KEY") &&
-            getSecret(character, "DCAP_MODE")
-                ? dcapPlugin
-                : null,
+            
+              
             getSecret(character, "QUICKINTEL_API_KEY")
                 ? quickIntelPlugin
                 : null,
@@ -1296,6 +1292,7 @@ export async function createAgent(
             getSecret(character, "ARBITRAGE_BUNDLE_EXECUTOR_ADDRESS")
                 ? arbitragePlugin
                 : null,
+            getSecret(character, "DISCORD_BOT_TOKEN") ? discordPlugin : null,
         ]
             .flat()
             .filter(Boolean),

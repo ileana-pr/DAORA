@@ -15,7 +15,9 @@
     "axios": "^1.6.5",
     "cheerio": "^1.0.0-rc.12",
     "discord.js": "^14.14.1",
-    "natural": "^6.10.0",
+    "natural": "^6.10.0"
+  },
+  "optionalDependencies": {
     "puppeteer": "^21.7.0"
   },
   "devDependencies": {

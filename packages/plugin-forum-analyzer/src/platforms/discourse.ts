@@ -16,10 +16,13 @@ export class DiscourseClient {
     this.config = config;
     this.axiosInstance = axios.create({
       baseURL: config.baseUrl,
-      headers: config.apiKey ? {
-        'Api-Key': config.apiKey,
-        'Api-Username': 'system'
-      } : {}
+      headers: {
+        ...(config.apiKey ? {
+          'Api-Key': config.apiKey,
+          'Api-Username': 'system'
+        } : {}),
+        'User-Agent': 'DAOra Forum Analyzer/1.0'
+      }
     });
   }
 
@@ -35,40 +38,40 @@ export class DiscourseClient {
     const baseUrl = this.config.baseUrl;
     
     try {
-      // Fetch the latest topics page
-      const response = await this.axiosInstance.get('/latest');
-      const $ = cheerio.load(response.data);
+      // First fetch the topics list
+      const topicsUrl = options.category ? 
+        `/c/${options.category}.json` : 
+        '/latest.json';
       
-      // Extract topics
-      const topics = $('.topic-list-item').slice(0, options.limit || 20);
+      const topicsResponse = await this.axiosInstance.get(topicsUrl);
+      const topics = topicsResponse.data.topic_list.topics.slice(0, options.limit || 20);
       
-      for (let i = 0; i < topics.length; i++) {
-        const topic = topics.eq(i);
-        const title = topic.find('.title a').text().trim();
-        const url = topic.find('.title a').attr('href');
-        
-        if (!url) continue;
-        
-        // Fetch individual topic page
-        const topicResponse = await this.axiosInstance.get(url);
-        const topic$ = cheerio.load(topicResponse.data);
-        
-        const firstPost = topic$('.topic-post').first();
-        const content = firstPost.find('.cooked').text().trim();
-        const author = firstPost.find('.username').text().trim();
-        const timestamp = new Date(firstPost.find('.post-date').attr('data-time') || '');
-        
-        posts.push({
-          id: url.split('/').pop() || '',
-          title,
-          content,
-          author,
-          timestamp,
-          url: `${baseUrl}${url}`,
-          platform: 'discourse',
-          replies: parseInt(topic.find('.replies').text().trim(), 10),
-          views: parseInt(topic.find('.views').text().trim(), 10)
-        });
+      // Fetch each topic's details
+      for (const topic of topics) {
+        try {
+          const topicResponse = await this.axiosInstance.get(`/t/${topic.id}.json`);
+          const topicData = topicResponse.data;
+          
+          if (topicData.posts && topicData.posts.length > 0) {
+            const firstPost = topicData.posts[0];
+            
+            posts.push({
+              id: firstPost.id.toString(),
+              title: topic.title,
+              content: firstPost.cooked || firstPost.raw,
+              author: firstPost.username,
+              timestamp: new Date(firstPost.created_at),
+              url: `${baseUrl}/t/${topic.slug}/${topic.id}`,
+              platform: 'discourse',
+              replies: topic.reply_count,
+              views: topic.views,
+              reactions: this.extractReactions(firstPost)
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching topic ${topic.id}:`, error);
+          continue;
+        }
       }
     } catch (error) {
       console.error('Error scraping Discourse forum:', error);
@@ -95,11 +98,27 @@ export class DiscourseClient {
         url: `${this.config.baseUrl}/t/${post.topic_slug}/${post.topic_id}/${post.post_number}`,
         platform: 'discourse',
         replies: post.reply_count,
-        views: post.reads
+        views: post.reads,
+        reactions: this.extractReactions(post)
       }));
     } catch (error) {
       console.error('Error fetching posts via Discourse API:', error);
       return [];
     }
+  }
+
+  private extractReactions(post: any): { type: string; count: number }[] {
+    const reactions: { type: string; count: number }[] = [];
+    
+    if (post.reaction_users_count) {
+      Object.entries(post.reaction_users_count).forEach(([reaction, count]) => {
+        reactions.push({
+          type: reaction,
+          count: count as number
+        });
+      });
+    }
+    
+    return reactions;
   }
 } 

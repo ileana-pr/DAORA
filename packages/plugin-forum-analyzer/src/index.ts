@@ -6,6 +6,9 @@ import { CommonwealthClient } from './platforms/commonwealth';
 import { analyzeDiscussion } from './analysis';
 
 export class ForumAnalyzerPlugin implements Plugin {
+  public readonly name = 'forum-analyzer';
+  public readonly description = 'Analyzes DAO forum discussions to identify governance proposals';
+  
   private config: ForumAnalyzerConfig;
   private discourseClient?: DiscourseClient;
   private discordClient?: DiscordClient;
@@ -59,11 +62,17 @@ export class ForumAnalyzerPlugin implements Plugin {
 
   // Plugin interface implementation
   async initialize(): Promise<void> {
-    // Initialization logic
+    // Initialize clients if not already done
+    if (!this.discourseClient && !this.discordClient && !this.commonwealthClient) {
+      this.initializeClients();
+    }
   }
 
   async shutdown(): Promise<void> {
-    // Cleanup logic
+    // Cleanup any active clients
+    if (this.discordClient) {
+      await this.discordClient.destroy();
+    }
   }
 
   getCapabilities(): string[] {
