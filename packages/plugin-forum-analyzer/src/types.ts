@@ -6,10 +6,7 @@ export interface ForumPost {
   timestamp: Date;
   url: string;
   platform: 'discourse' | 'discord' | 'commonwealth';
-  reactions?: {
-    type: string;
-    count: number;
-  }[];
+  reactions?: Array<{ count: number }>;
   replies?: number;
   views?: number;
 }
@@ -26,16 +23,21 @@ export interface DiscussionAnalysis {
     totalInteractions: number;
   };
   proposalPotential: {
-    score: number; // 0-1
-    confidence: number; // 0-1
-    type?: 'governance' | 'treasury' | 'technical' | 'social' | 'other';
+    score: number;
+    confidence: number;
+    type: 'governance' | 'treasury' | 'technical' | 'social' | 'other';
     keyPoints: string[];
   };
   consensus: {
-    level: number; // 0-1
+    level: number;
     majorityOpinion?: string;
     dissenting?: string;
   };
+  topics: string[];
+  perspectives: string[];
+  suggestedSolutions: string[];
+  stakeholders: string[];
+  keyPoints: string[];
 }
 
 export interface ForumAnalyzerConfig {

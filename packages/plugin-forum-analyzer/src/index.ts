@@ -4,6 +4,7 @@ import { DiscourseClient } from './platforms/discourse';
 import { DiscordClient } from './platforms/discord';
 import { CommonwealthClient } from './platforms/commonwealth';
 import { analyzeDiscussion } from './analysis';
+import { analyzeForumAction } from './actions/analyze';
 
 export class ForumAnalyzerPlugin implements Plugin {
   public readonly name = 'forum-analyzer';
@@ -83,6 +84,11 @@ export class ForumAnalyzerPlugin implements Plugin {
       'sentiment:analyze'
     ];
   }
+
+  // Add the actions array
+  actions = [
+    analyzeForumAction
+  ];
 }
 
 // Export the plugin

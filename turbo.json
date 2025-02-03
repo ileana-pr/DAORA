@@ -61,6 +61,10 @@
             "outputs": ["dist/**"],
             "dependsOn": ["@elizaos/plugin-tee#build"]
         },
+        "@elizaos/plugin-forum-analyzer#build": {
+            "outputs": ["dist/**"],
+            "dependsOn": ["@elizaos/core#build"]
+        },
         "eliza-docs#build": {
             "outputs": ["build/**"]
         },

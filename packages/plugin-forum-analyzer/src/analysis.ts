@@ -49,7 +49,12 @@ export async function analyzeDiscussion(post: ForumPost, options: AnalysisOption
       type: determineProposalType(tokens),
       keyPoints: extractKeyPoints(post.content)
     },
-    consensus: analyzeConsensus(post)
+    consensus: analyzeConsensus(post),
+    topics: extractTopics(post.content),
+    perspectives: extractPerspectives(post.content),
+    suggestedSolutions: extractSolutions(post.content),
+    stakeholders: extractStakeholders(post.content),
+    keyPoints: extractKeyPoints(post.content)
   };
 }
 
@@ -182,4 +187,84 @@ function analyzeConsensus(post: ForumPost) {
 
 function normalizeScore(score: number, min: number, max: number): number {
   return (score - min) / (max - min) * 2 - 1;
+}
+
+function extractTopics(content: string): string[] {
+  const tfidf = new TfIdf();
+  const sentences = content.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+  
+  // Add each sentence as a document
+  sentences.forEach(sentence => tfidf.addDocument(sentence));
+  
+  // Get unique words from content
+  const words = new Set(tokenizer.tokenize(content.toLowerCase()));
+  
+  // Calculate TF-IDF scores for each word
+  const wordScores = Array.from(words).map(word => ({
+    word,
+    score: sentences.reduce((sum, _, idx) => sum + tfidf.tfidf(word, idx), 0)
+  }));
+  
+  // Return top 5 scoring words as topics
+  return wordScores
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(ws => ws.word);
+}
+
+function extractPerspectives(content: string): string[] {
+  const sentences = content.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+  const perspectiveIndicators = [
+    'think', 'believe', 'feel', 'suggest', 'propose',
+    'argue', 'consider', 'view', 'opinion', 'perspective'
+  ];
+  
+  return sentences
+    .filter(sentence => {
+      const lowerSentence = sentence.toLowerCase();
+      return perspectiveIndicators.some(indicator => lowerSentence.includes(indicator));
+    })
+    .slice(0, 3); // Limit to top 3 perspectives
+}
+
+function extractSolutions(content: string): string[] {
+  const sentences = content.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+  const solutionIndicators = [
+    'should', 'could', 'propose', 'suggest', 'recommend',
+    'solution', 'implement', 'improve', 'resolve', 'fix',
+    'address', 'solve', 'approach'
+  ];
+  
+  return sentences
+    .filter(sentence => {
+      const lowerSentence = sentence.toLowerCase();
+      return solutionIndicators.some(indicator => lowerSentence.includes(indicator));
+    })
+    .slice(0, 3); // Limit to top 3 solutions
+}
+
+function extractStakeholders(content: string): string[] {
+  const stakeholderIndicators = [
+    'community', 'users', 'developers', 'team', 'contributors',
+    'holders', 'investors', 'members', 'participants', 'stakeholders',
+    'dao', 'protocol', 'foundation', 'council', 'committee'
+  ];
+  
+  const words = tokenizer.tokenize(content.toLowerCase());
+  const stakeholders = new Set<string>();
+  
+  // Find direct mentions of stakeholder groups
+  stakeholderIndicators.forEach(indicator => {
+    if (words.includes(indicator)) {
+      stakeholders.add(indicator);
+    }
+  });
+  
+  // Look for compound stakeholder terms (e.g., "core team", "community members")
+  const compoundStakeholders = content.toLowerCase()
+    .match(new RegExp(`\\b(${stakeholderIndicators.join('|')})\\s+\\w+\\b`, 'g')) || [];
+    
+  compoundStakeholders.forEach(match => stakeholders.add(match));
+  
+  return Array.from(stakeholders).slice(0, 5); // Limit to top 5 stakeholders
 } 

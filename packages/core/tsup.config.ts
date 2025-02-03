@@ -5,7 +5,7 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     clean: true,
-    format: ["esm"], // Ensure you're targeting CommonJS
+    format: ["esm", "cjs"], // Output both ESM and CommonJS formats
     platform: "node",
     target: "node18",
     bundle: true,
